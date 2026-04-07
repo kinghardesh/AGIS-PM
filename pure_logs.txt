@@ -1,0 +1,230 @@
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 23, in <module>
+    from agents.monitor_agent import MonitorAgent
+  File "/app/agents/monitor_agent.py", line 60, in <module>
+    logging.basicConfig(
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 2137, in basicConfig
+    root.setLevel(level)
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 1514, in setLevel
+    self.level = _checkLevel(level)
+                 ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/logging/__init__.py", line 213, in _checkLevel
+    raise ValueError("Unknown level: %r" % level)
+ValueError: Unknown level: 'debug'
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 25, in <module>
+    from agents.group_chat import run_full_cycle
+  File "/app/agents/group_chat.py", line 56, in <module>
+    from agents.monitor_agent import (
+ImportError: cannot import name 'poll_stale_tasks' from 'agents.monitor_agent' (/app/agents/monitor_agent.py)
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 25, in <module>
+    from agents.group_chat import run_full_cycle
+  File "/app/agents/group_chat.py", line 56, in <module>
+    from agents.monitor_agent import (
+ImportError: cannot import name 'poll_stale_tasks' from 'agents.monitor_agent' (/app/agents/monitor_agent.py)
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 25, in <module>
+    from agents.group_chat import run_full_cycle
+  File "/app/agents/group_chat.py", line 56, in <module>
+    from agents.monitor_agent import (
+ImportError: cannot import name 'poll_stale_tasks' from 'agents.monitor_agent' (/app/agents/monitor_agent.py)
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 25, in <module>
+    from agents.group_chat import run_full_cycle
+  File "/app/agents/group_chat.py", line 56, in <module>
+    from agents.monitor_agent import (
+ImportError: cannot import name 'poll_stale_tasks' from 'agents.monitor_agent' (/app/agents/monitor_agent.py)
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 25, in <module>
+    from agents.group_chat import run_full_cycle
+  File "/app/agents/group_chat.py", line 56, in <module>
+    from agents.monitor_agent import (
+ImportError: cannot import name 'poll_stale_tasks' from 'agents.monitor_agent' (/app/agents/monitor_agent.py)
+/usr/local/lib/python3.12/site-packages/flaml/__init__.py:20: UserWarning: flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.
+  warnings.warn("flaml.automl is not available. Please install flaml[automl] to enable AutoML functionalities.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/agents/runner.py", line 25, in <module>
+    from agents.group_chat import run_full_cycle
+  File "/app/agents/group_chat.py", line 56, in <module>
+    from agents.monitor_agent import (
+ImportError: cannot import name 'poll_stale_tasks' from 'agents.monitor_agent' (/app/agents/monitor_agent.py)

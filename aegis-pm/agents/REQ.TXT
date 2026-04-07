@@ -1,0 +1,7 @@
+httpx
+python-dotenv
+pyautogen
+fastapi
+uvicorn
+apscheduler
+pydantic

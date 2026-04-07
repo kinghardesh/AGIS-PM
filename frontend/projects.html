@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aegis PM | Projects & Employees</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#F7F7F5;--surface:#FFFFFF;--surface2:#F0F0EE;
+  --border:#E8E8E4;--border2:#D8D8D2;
+  --text:#1A1A18;--text2:#6B6B66;--text3:#A8A8A2;
+  --accent:#2B5CE6;--accent-light:#EEF2FF;
+  --green:#16A34A;--green-light:#F0FDF4;
+  --red:#DC2626;--red-light:#FEF2F2;
+  --amber:#D97706;--amber-light:#FFFBEB;
+  --sidebar:220px;--header:56px;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.layout{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;}
+.sidebar-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;height:var(--header);}
+.logo-mark{width:28px;height:28px;background:var(--text);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-mark svg{width:16px;height:16px;fill:white;}
+.logo-name{font-size:15px;font-weight:600;letter-spacing:-0.3px;}
+.sidebar-section{padding:20px 12px 8px;}
+.sidebar-section-label{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13.5px;font-weight:400;transition:background 0.15s,color 0.15s;margin-bottom:1px;text-decoration:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--accent-light);color:var(--accent);font-weight:500;}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:0.7;}
+.nav-item.active svg{opacity:1;}
+.sidebar-footer{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
+.user-pill{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:white;}
+.user-name{font-size:13px;font-weight:500;}
+.user-role{font-size:11px;color:var(--text3);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{height:var(--header);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:40;}
+.page-title{font-size:15px;font-weight:600;letter-spacing:-0.2px;}
+.content{padding:28px;max-width:1200px;margin:0 auto;width:100%;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px;gap:24px;}
+.tab{padding:8px 4px;font-size:14px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;font-weight:500;}
+.tab.active{color:var(--text);border-bottom-color:var(--accent);}
+
+/* CARDS & GRIDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.card-title{font-size:16px;font-weight:600;}
+
+.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;transition:0.2s;}
+.btn-primary{background:var(--accent);color:white;}
+.btn-primary:hover{opacity:0.9;}
+.btn-secondary{background:var(--surface2);color:var(--text);}
+.btn-secondary:hover{background:var(--border);}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+
+table{width:100%;border-collapse:collapse;}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);}
+th{font-size:11px;text-transform:uppercase;color:var(--text3);font-weight:500;}
+td{font-size:13px;}
+tr:last-child td{border-bottom:none;}
+
+.badge{padding:4px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface2);color:var(--text2);}
+.badge.green{background:var(--green-light);color:var(--green);}
+.badge.blue{background:var(--accent-light);color:var(--accent);}
+
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:12px;font-weight:500;margin-bottom:6px;color:var(--text2);}
+.form-input,.form-textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;}
+.form-textarea{height:120px;resize:vertical;}
+
+/* MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:auto;}
+.modal{background:var(--surface);width:600px;border-radius:12px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,0.2);transform:translateY(20px);transition:0.2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.modal-title{font-size:18px;font-weight:600;}
+.close-btn{cursor:pointer;color:var(--text3);}
+
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--text);color:white;padding:12px 20px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 10px 20px rgba(0,0,0,0.1);opacity:0;transform:translateY(10px);transition:0.3s;}
+.toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5L12 1z"/></svg></div>
+      <div class="logo-name">Aegis PM</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Workspace</div>
+      <a class="nav-item" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Alert Dashboard
+      </a>
+      <a class="nav-item active" href="/projects.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Projects & Team
+      </a>
+      <a class="nav-item" href="/integrations.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Integrations
+      </a>
+      <a class="nav-item" href="/analytics.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="page-title">Projects & Team</div>
+    </header>
+    <div class="content">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('projects', this)">Projects</div>
+        <div class="tab" onclick="switchTab('employees', this)">Team Hub</div>
+      </div>
+
+      <!-- PROJECTS VIEW -->
+      <div id="view-projects">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Active Projects</h2>
+            <button class="btn btn-primary" onclick="openProjectModal()">+ New Project from PRD</button>
+          </div>
+          <table id="projects-table">
+            <thead>
+              <tr><th>Project Name</th><th>Status</th><th>Progress</th><th>Tasks</th><th>Actions</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <div id="project-detail" style="display:none;" class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="d-proj-name">Project Details</h2>
+              <p style="font-size:12px;color:var(--text3);margin-top:4px;" id="d-proj-desc">Description</p>
+            </div>
+            <div>
+              <button class="btn btn-secondary" onclick="parsePRD()" id="btn-parse">1. Auto-Generate Tasks</button>
+              <button class="btn btn-primary" onclick="assignTasks()" id="btn-assign">2. AI Assign Tasks</button>
+            </div>
+          </div>
+          <table id="tasks-table">
+            <thead>
+              <tr><th>Task</th><th>Priority</th><th>Est. Hours</th><th>Skills</th><th>Assignee</th><th>AI Match</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EMPLOYEES VIEW -->
+      <div id="view-employees" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Team Roster</h2>
+            <button class="btn btn-primary" onclick="openEmployeeModal()">+ Add Member</button>
+          </div>
+          <table id="employees-table">
+            <thead>
+              <tr><th>Name</th><th>Role</th><th>Skills</th><th>Load</th><th>Status</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Project from PRD</h3>
+      <div class="close-btn" onclick="closeModals()">✕</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project Name</label>
+      <input type="text" class="form-input" id="p-name" placeholder="e.g. Redesign Checkout Flow">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Objective / Description</label>
+      <input type="text" class="form-input" id="p-desc" placeholder="Brief description">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Paste PRD (Product Requirements Document)</label>
+      <textarea class="form-textarea" id="p-prd" placeholder="Paste your markdown or text PRD here..."></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px" onclick="createProject()">Create Project</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="employee-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Team Member</h3>
+      <div class="close-btn" onclick="closeModals()">✕</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input type="text" class="form-input" id="e-name" placeholder="Jane Doe">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Role</label>
+      <input type="text" class="form-input" id="e-role" placeholder="Senior Frontend Engineer">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Skills (comma separated)</label>
+      <input type="text" class="form-input" id="e-skills" placeholder="react, typescript, ui">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px" onclick="createEmployee()">Add Member</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const API = (location.port === '3000') ? '/api' : 'http://127.0.0.1:8000';
+let currentProjectId = null;
+
+function showToast(msg) {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast show';
+  t.innerHTML = msg;
+  c.appendChild(t);
+  setTimeout(()=> { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-projects').style.display = tab === 'projects' ? 'block' : 'none';
+  document.getElementById('view-employees').style.display = tab === 'employees' ? 'block' : 'none';
+  if(tab === 'projects') loadProjects();
+  if(tab === 'employees') loadEmployees();
+}
+
+function openProjectModal(){ document.getElementById('project-modal').classList.add('open'); }
+function openEmployeeModal(){ document.getElementById('employee-modal').classList.add('open'); }
+function closeModals(){ document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open')); }
+
+async function loadProjects() {
+  const r = await fetch(API+'/projects');
+  const projs = await r.json();
+  const tb = document.querySelector('#projects-table tbody');
+  tb.innerHTML = projs.map(p=>`
+    <tr style="cursor:pointer" onclick="viewProject(${p.id})">
+      <td><strong>${p.name}</strong><br><span style="color:var(--text3);font-size:11px">${p.description||''}</span></td>
+      <td><span class="badge ${p.status==='active'?'green':''}">${p.status}</span></td>
+      <td>
+        <div style="width:100%;background:var(--border);height:6px;border-radius:3px;margin-bottom:4px">
+          <div style="background:var(--accent);height:100%;border-radius:3px;width:${p.progress}%"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">${p.progress}%</span>
+      </td>
+      <td>${p.total_tasks} total</td>
+      <td><button class="btn btn-secondary" onclick="event.stopPropagation();viewProject(${p.id})">Manage</button></td>
+    </tr>
+  `).join('');
+}
+
+async function createProject() {
+  const name = document.getElementById('p-name').value;
+  const desc = document.getElementById('p-desc').value;
+  const prd = document.getElementById('p-prd').value;
+  
+  await fetch(API+'/projects', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, description:desc, prd_text:prd})
+  });
+  closeModals();
+  document.getElementById('p-name').value='';
+  document.getElementById('p-desc').value='';
+  document.getElementById('p-prd').value='';
+  showToast('Project created successfully!');
+  loadProjects();
+}
+
+async function viewProject(id) {
+  currentProjectId = id;
+  const r = await fetch(API+'/projects/'+id);
+  const p = await r.json();
+  
+  document.getElementById('view-projects').querySelector('.card').style.display='none';
+  const detail = document.getElementById('project-detail');
+  detail.style.display='block';
+  
+  document.getElementById('d-proj-name').textContent = p.name;
+  document.getElementById('d-proj-desc').textContent = '< Back to List | ' + (p.description||'');
+  document.getElementById('d-proj-desc').style.cursor='pointer';
+  document.getElementById('d-proj-desc').onclick = () => {
+    document.getElementById('project-detail').style.display='none';
+    document.getElementById('view-projects').querySelector('.card').style.display='block';
+    loadProjects();
+  };
+
+  const tb = document.querySelector('#tasks-table tbody');
+  const dSkills = (skills) => (skills||[]).map(s=>`<span class="badge">${s}</span>`).join(' ');
+
+  if(!p.tasks || !p.tasks.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">No tasks yet. Click "Auto-Generate Tasks".</td></tr>';
+  } else {
+    tb.innerHTML = p.tasks.map(t=>`
+      <tr>
+        <td><strong>${t.title}</strong><br><span style="font-size:11px;color:var(--text3)">${t.description.substring(0,60)}...</span></td>
+        <td><span class="badge ${t.priority==='high'?'blue':''}">${t.priority}</span></td>
+        <td>${t.estimated_hours}h</td>
+        <td>${dSkills(t.required_skills_list)}</td>
+        <td>${t.assigned_name || '<em style="color:var(--amber)">Unassigned</em>'}</td>
+        <td>${t.ai_confidence ? `<span class="badge green">${t.ai_confidence}% Match</span>` : '—'}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+async function parsePRD() {
+  showToast('AI is parsing PRD into tasks...');
+  const btn = document.getElementById('btn-parse');
+  btn.disabled = true;
+  await fetch(API+'/projects/'+currentProjectId+'/parse', {method:'POST'});
+  showToast('Tasks generated successfully!');
+  btn.disabled = false;
+  viewProject(currentProjectId);
+}
+
+async function assignTasks() {
+  showToast('AI matching tasks to employees...');
+  const btn = document.getElementById('btn-assign');
+  btn.disabled = true;
+  await fetch(API+'/projects/'+currentProjectId+'/assign-all', {method:'POST'});
+  showToast('Tasks assigned successfully based on skills!');
+  btn.disabled = false;
+  viewProject(currentProjectId);
+}
+
+async function loadEmployees() {
+  const r = await fetch(API+'/employees');
+  const emps = await r.json();
+  const tb = document.querySelector('#employees-table tbody');
+  const dSkills = (skills) => (skills||[]).map(s=>`<span class="badge">${s}</span>`).join(' ');
+  
+  tb.innerHTML = emps.map(e=>`
+    <tr>
+      <td>
+        <div class="user-pill" style="padding:0">
+          <div class="avatar" style="width:24px;height:24px;">${initials(e.name)}</div>
+          <strong>${e.name}</strong>
+        </div>
+      </td>
+      <td>${e.role||'—'}</td>
+      <td>${dSkills(e.skills_list)}</td>
+      <td>${e.current_load} tasks</td>
+      <td><span class="badge green">${e.availability}</span></td>
+    </tr>
+  `).join('');
+}
+
+async function createEmployee() {
+  const name = document.getElementById('e-name').value;
+  const role = document.getElementById('e-role').value;
+  const skillsStr = document.getElementById('e-skills').value;
+  const skills = skillsStr.split(',').map(s=>s.trim()).filter(Boolean);
+  
+  await fetch(API+'/employees', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, role, skills})
+  });
+  closeModals();
+  document.getElementById('e-name').value='';
+  document.getElementById('e-role').value='';
+  document.getElementById('e-skills').value='';
+  showToast('Employee added successfully!');
+  loadEmployees();
+}
+
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+
+// init
+loadProjects();
+</script>
+</body>
+</html>

@@ -55,7 +55,8 @@ from dotenv import load_dotenv
 
 from agents.monitor_agent import (
     check_for_stale_tasks,
-    register_alert,
+    save_alert,
+    notify_communicator,
 )
 from agents.communicator_agent import (
     fetch_approved_alerts,
@@ -91,10 +92,11 @@ def _make_monitor_assistant() -> AssistantAgent:
         system_message="""You are the Monitor Agent for Aegis PM.
 
 When AegisSupervisor asks you to check for stale tasks:
-1. Call `check_for_stale_tasks` with the project key and stale_days threshold.
-2. For each stale issue returned, call `register_alert`.
-3. Report back to AegisSupervisor with a concise JSON summary:
-   {"monitor_result": {"stale_found": <int>, "alerts_registered": <int>, "issues": [...]}}
+1. Call `check_for_stale_tasks` with the project key to find stale In Progress tasks.
+2. For each task returned, call `save_alert` to persist it to the database.
+3. For each task, also call `notify_communicator` to queue a Slack notification.
+4. Report back to AegisSupervisor with a concise JSON summary:
+   {"monitor_result": {"stale_found": <int>, "alerts_saved": <int>, "notifications_queued": <int>, "tasks": [...]}}
 
 Rules:
 - Only speak when AegisSupervisor addresses you.
@@ -216,16 +218,28 @@ def _register_all_tools(
         executor=admin,
         name="check_for_stale_tasks",
         description=(
-            "Query Jira for 'In Progress' issues not updated in stale_days days."
+            "Query Jira for 'In Progress' issues not updated in the configured "
+            "number of days. Returns JSON with a 'tasks' list."
         ),
     )
     register_function(
-        register_alert,
+        save_alert,
         caller=monitor,
         executor=admin,
-        name="register_alert",
+        name="save_alert",
         description=(
-            "Register a stale-task alert in the Aegis PM backend."
+            "Persist a stale-task alert directly to PostgreSQL. "
+            "Duplicate pending alerts are silently ignored."
+        ),
+    )
+    register_function(
+        notify_communicator,
+        caller=monitor,
+        executor=admin,
+        name="notify_communicator",
+        description=(
+            "Queue a Slack notification for the task assignee by sending "
+            "task details to the Communicator Agent via the Aegis API."
         ),
     )
 

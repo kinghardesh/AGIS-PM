@@ -26,12 +26,18 @@ import asyncio
 import json
 import logging
 import os
-import time
 from typing import Any, Dict, List, Optional
 
 import httpx
 from autogen import AssistantAgent, UserProxyAgent, register_function
 from dotenv import load_dotenv
+
+# Import cooldown updater – called after confirmed Slack send so cooldown resets correctly
+try:
+    from agents.monitor_agent import update_notification_timestamp as _update_cooldown
+except ImportError:
+    def _update_cooldown(task_key: str) -> None:  # type: ignore
+        pass
 
 load_dotenv()
 log = logging.getLogger("aegis.communicator")
@@ -377,6 +383,10 @@ def mark_alert_notified(alert_id: int) -> str:
     try:
         updated = asyncio.get_event_loop().run_until_complete(_patch())
         log.info("Alert %d marked as notified (status=%s)", alert_id, updated.get("status"))
+        # Update cooldown timestamp so monitor won't re-notify for NOTIFY_COOLDOWN_HOURS
+        task_key = updated.get("task_key", "")
+        if task_key:
+            _update_cooldown(task_key)
         return json.dumps({
             "success": True,
             "alert_id": alert_id,

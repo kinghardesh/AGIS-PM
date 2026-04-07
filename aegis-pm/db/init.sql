@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS alerts (
                   CHECK (status IN ('pending', 'approved', 'dismissed', 'notified')),
     slack_sent    BOOLEAN      NOT NULL DEFAULT FALSE,
     slack_ts      VARCHAR(64),                     -- Slack message timestamp (for threading)
-    notes         TEXT                             -- optional human notes on approve/dismiss
+    notes         TEXT,                            -- optional human notes on approve/dismiss
+    -- Notification cooldown (prevents re-notifying within cooldown_hours)
+    last_notified_at  TIMESTAMPTZ,                 -- when Slack was last sent for this task
+    notify_count      INTEGER      NOT NULL DEFAULT 0,   -- total notifications sent
+    cooldown_hours    INTEGER      NOT NULL DEFAULT 24   -- hours before re-notification allowed
 );
 
 -- Index for fast lookups by status (dashboard queries)
@@ -53,18 +57,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_created   ON alert_audit_log (created_at DE
 --  assignee more than once per NOTIFY_COOLDOWN_HOURS hours.
 -- ============================================================
 
-ALTER TABLE alerts
-    ADD COLUMN IF NOT EXISTS last_notified_at   TIMESTAMPTZ,
-    ADD COLUMN IF NOT EXISTS notify_count       INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS cooldown_hours     INTEGER NOT NULL DEFAULT 24;
-
-COMMENT ON COLUMN alerts.last_notified_at IS
-    'Timestamp of the most recent Slack notification for this alert';
-COMMENT ON COLUMN alerts.notify_count IS
-    'Total number of Slack notifications sent for this alert';
-COMMENT ON COLUMN alerts.cooldown_hours IS
-    'Hours that must pass before another notification is sent (default 24)';
-
+-- Cooldown columns (last_notified_at, notify_count, cooldown_hours) are
+-- declared in the CREATE TABLE above. The index below is created separately
+-- since conditional indexes can't be in CREATE TABLE.
 CREATE INDEX IF NOT EXISTS idx_alerts_last_notified
     ON alerts (last_notified_at DESC)
     WHERE last_notified_at IS NOT NULL;

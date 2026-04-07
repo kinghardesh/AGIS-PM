@@ -57,14 +57,14 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 from dotenv import load_dotenv
-from api.security import require_agent_key, require_admin_key, rate_limit
+from api.security import require_agent_key, require_admin_key, rate_limit, inject_request_id
 
 load_dotenv()
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -112,13 +112,9 @@ alerts_table = sa.Table(
     sa.Column("last_updated",   sa.DateTime(timezone=True)),
     sa.Column("detected_at",    sa.DateTime(timezone=True),  server_default=sa.func.now()),
     sa.Column("status",         sa.String(32),               server_default="pending"),
-    sa.Column("slack_sent",       sa.Boolean,                  server_default="false"),
-    sa.Column("slack_ts",         sa.String(64)),
-    sa.Column("notes",            sa.Text),
-    # Notification cooldown (migration 001)
-    sa.Column("last_notified_at", sa.DateTime(timezone=True)),
-    sa.Column("notify_count",     sa.Integer,    server_default="0",  default=0),
-    sa.Column("cooldown_hours",   sa.Integer,    server_default="24", default=24),
+    sa.Column("slack_sent",     sa.Boolean,                  server_default="false"),
+    sa.Column("slack_ts",       sa.String(64)),
+    sa.Column("notes",          sa.Text),
 )
 
 audit_log_table = sa.Table(
@@ -133,7 +129,54 @@ audit_log_table = sa.Table(
     sa.Column("created_at",  sa.DateTime(timezone=True),  server_default=sa.func.now()),
 )
 
-# ── Lifespan ──────────────────────────────────────────────────────────────────
+# ── New tables: Projects, Employees, Tasks ────────────────────────────────────
+
+projects_table = sa.Table(
+    "projects",
+    metadata,
+    sa.Column("id",          sa.Integer,                  primary_key=True),
+    sa.Column("name",        sa.String(255),              nullable=False),
+    sa.Column("description", sa.Text),
+    sa.Column("prd_text",    sa.Text),
+    sa.Column("status",      sa.String(32),               server_default="active"),
+    sa.Column("total_tasks", sa.Integer,                  server_default="0"),
+    sa.Column("completed_tasks", sa.Integer,              server_default="0"),
+    sa.Column("created_at",  sa.DateTime(timezone=True),  server_default=sa.func.now()),
+    sa.Column("updated_at",  sa.DateTime(timezone=True),  server_default=sa.func.now()),
+)
+
+employees_table = sa.Table(
+    "employees",
+    metadata,
+    sa.Column("id",          sa.Integer,                  primary_key=True),
+    sa.Column("name",        sa.String(255),              nullable=False),
+    sa.Column("email",       sa.String(255)),
+    sa.Column("role",        sa.String(128)),
+    sa.Column("skills",      sa.Text),              # JSON array stored as text
+    sa.Column("availability",sa.String(32),               server_default="available"),
+    sa.Column("current_load",sa.Integer,                  server_default="0"),
+    sa.Column("created_at",  sa.DateTime(timezone=True),  server_default=sa.func.now()),
+)
+
+tasks_table = sa.Table(
+    "tasks",
+    metadata,
+    sa.Column("id",              sa.Integer,                  primary_key=True),
+    sa.Column("project_id",      sa.Integer,                  nullable=False),
+    sa.Column("title",           sa.String(500),              nullable=False),
+    sa.Column("description",     sa.Text),
+    sa.Column("priority",        sa.String(32),               server_default="medium"),
+    sa.Column("status",          sa.String(32),               server_default="todo"),
+    sa.Column("estimated_hours", sa.Float,                    server_default="0"),
+    sa.Column("assigned_to",     sa.Integer),                 # employee_id
+    sa.Column("assigned_name",   sa.String(255)),
+    sa.Column("ai_confidence",   sa.Float),
+    sa.Column("required_skills", sa.Text),             # JSON array
+    sa.Column("created_at",      sa.DateTime(timezone=True),  server_default=sa.func.now()),
+    sa.Column("completed_at",    sa.DateTime(timezone=True)),
+)
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -168,8 +211,8 @@ app.add_middleware(
 
 # ── Mount health router ──────────────────────────────────────────────────────
 
-if _HEALTH_ROUTER_AVAILABLE and _health_router:
-    app.include_router(_health_router)
+# if _HEALTH_ROUTER_AVAILABLE and _health_router:
+#     app.include_router(_health_router)
 
 # ── Middleware: request logging + timing ──────────────────────────────────────
 
@@ -221,12 +264,9 @@ class AlertOut(BaseModel):
     last_updated:   Optional[datetime]
     detected_at:    datetime
     status:         str
-    slack_sent:       bool
-    slack_ts:         Optional[str]
-    notes:            Optional[str]
-    last_notified_at: Optional[datetime]
-    notify_count:     int
-    cooldown_hours:   int
+    slack_sent:     bool
+    slack_ts:       Optional[str]
+    notes:          Optional[str]
 
     class Config:
         from_attributes = True
@@ -813,3 +853,623 @@ async def get_alert_history(
     )
     rows = result.mappings().all()
     return [dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – Analytics
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get(
+    "/analytics",
+    summary="Full analytics data for the dashboard",
+    tags=["Analytics"],
+)
+async def get_analytics(db: AsyncSession = Depends(get_db)):
+    """
+    Returns comprehensive analytics data:
+    - Status distribution
+    - Alerts by assignee
+    - Daily alert trend (last 7 days)
+    - Recent audit log activity
+    - Resolution metrics
+    """
+    from datetime import timedelta
+
+    now = datetime.utcnow()
+    col = alerts_table.c
+
+    # 1. Status distribution
+    status_result = await db.execute(
+        sa.select(col.status, sa.func.count().label("count"))
+        .group_by(col.status)
+    )
+    status_dist = {row.status: row.count for row in status_result}
+
+    # 2. Alerts by assignee
+    assignee_result = await db.execute(
+        sa.select(col.assignee, col.status, sa.func.count().label("count"))
+        .group_by(col.assignee, col.status)
+    )
+    assignee_map = {}
+    for row in assignee_result:
+        if row.assignee not in assignee_map:
+            assignee_map[row.assignee] = {"total": 0, "pending": 0, "approved": 0, "dismissed": 0, "notified": 0}
+        assignee_map[row.assignee][row.status] = row.count
+        assignee_map[row.assignee]["total"] += row.count
+
+    assignee_breakdown = [
+        {"assignee": k, **v} for k, v in sorted(assignee_map.items(), key=lambda x: -x[1]["total"])
+    ]
+
+    # 3. Daily trend (last 7 days)
+    daily_trend = []
+    for i in range(6, -1, -1):
+        day_start = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        day_result = await db.execute(
+            sa.select(sa.func.count()).select_from(alerts_table)
+            .where(col.detected_at >= day_start, col.detected_at < day_end)
+        )
+        count = day_result.scalar_one()
+        daily_trend.append({
+            "date": day_start.strftime("%Y-%m-%d"),
+            "label": day_start.strftime("%a"),
+            "count": count,
+        })
+
+    # 4. Recent audit activity (last 20 entries)
+    audit_result = await db.execute(
+        sa.select(audit_log_table)
+        .order_by(audit_log_table.c.created_at.desc())
+        .limit(20)
+    )
+    recent_activity = [dict(r) for r in audit_result.mappings().all()]
+
+    # 5. Resolution metrics
+    resolved_result = await db.execute(
+        sa.select(sa.func.count()).select_from(alerts_table)
+        .where(col.status.in_(["approved", "notified", "dismissed"]))
+    )
+    total_resolved = resolved_result.scalar_one()
+
+    total_result = await db.execute(
+        sa.select(sa.func.count()).select_from(alerts_table)
+    )
+    total_all = total_result.scalar_one()
+
+    # Slack sent count
+    slack_result = await db.execute(
+        sa.select(sa.func.count()).select_from(alerts_table)
+        .where(col.slack_sent == True)
+    )
+    slack_sent = slack_result.scalar_one()
+
+    return {
+        "status_distribution": status_dist,
+        "assignee_breakdown": assignee_breakdown,
+        "daily_trend": daily_trend,
+        "recent_activity": recent_activity,
+        "metrics": {
+            "total_alerts": total_all,
+            "total_resolved": total_resolved,
+            "resolution_rate": round(total_resolved / max(total_all, 1) * 100, 1),
+            "slack_notifications_sent": slack_sent,
+            "pending": status_dist.get("pending", 0),
+        },
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – Employees
+# ══════════════════════════════════════════════════════════════════════════════
+
+class EmployeeCreate(BaseModel):
+    name:         str  = Field(..., min_length=1, max_length=255)
+    email:        Optional[str] = None
+    role:         Optional[str] = None
+    skills:       List[str]     = Field(default_factory=list)
+    availability: str           = "available"
+
+class EmployeeOut(BaseModel):
+    id:           int
+    name:         str
+    email:        Optional[str]
+    role:         Optional[str]
+    skills:       str      # JSON string
+    availability: str
+    current_load: int
+    created_at:   datetime
+    class Config:
+        from_attributes = True
+
+
+@app.post("/employees", status_code=201, summary="Add employee", tags=["Employees"])
+async def create_employee(payload: EmployeeCreate, db: AsyncSession = Depends(get_db)):
+    import json
+    result = await db.execute(
+        employees_table.insert()
+        .values(name=payload.name, email=payload.email, role=payload.role,
+                skills=json.dumps(payload.skills), availability=payload.availability)
+        .returning(employees_table)
+    )
+    await db.commit()
+    row = result.mappings().first()
+    log.info("Employee created: %s (%s)", row["name"], row["role"])
+    return dict(row)
+
+
+@app.get("/employees", summary="List employees", tags=["Employees"])
+async def list_employees(db: AsyncSession = Depends(get_db)):
+    import json
+    result = await db.execute(sa.select(employees_table).order_by(employees_table.c.name))
+    rows = result.mappings().all()
+    emp_list = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["skills_list"] = json.loads(d["skills"]) if d["skills"] else []
+        except:
+            d["skills_list"] = []
+        emp_list.append(d)
+    return emp_list
+
+
+@app.put("/employees/{emp_id}", summary="Update employee", tags=["Employees"])
+async def update_employee(emp_id: int, payload: EmployeeCreate, db: AsyncSession = Depends(get_db)):
+    import json
+    result = await db.execute(sa.select(employees_table).where(employees_table.c.id == emp_id))
+    if not result.mappings().first():
+        raise HTTPException(404, f"Employee {emp_id} not found")
+    await db.execute(
+        employees_table.update().where(employees_table.c.id == emp_id)
+        .values(name=payload.name, email=payload.email, role=payload.role,
+                skills=json.dumps(payload.skills), availability=payload.availability)
+    )
+    await db.commit()
+    result2 = await db.execute(sa.select(employees_table).where(employees_table.c.id == emp_id))
+    return dict(result2.mappings().first())
+
+
+@app.delete("/employees/{emp_id}", summary="Delete employee", tags=["Employees"])
+async def delete_employee(emp_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(sa.select(employees_table).where(employees_table.c.id == emp_id))
+    if not result.mappings().first():
+        raise HTTPException(404, f"Employee {emp_id} not found")
+    await db.execute(employees_table.delete().where(employees_table.c.id == emp_id))
+    await db.commit()
+    return {"deleted": emp_id}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – Projects
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ProjectCreate(BaseModel):
+    name:        str           = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    prd_text:    Optional[str] = None
+
+
+@app.post("/projects", status_code=201, summary="Create project", tags=["Projects"])
+async def create_project(payload: ProjectCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        projects_table.insert()
+        .values(name=payload.name, description=payload.description, prd_text=payload.prd_text)
+        .returning(projects_table)
+    )
+    await db.commit()
+    row = result.mappings().first()
+    log.info("Project created: %s", row["name"])
+    return dict(row)
+
+
+@app.get("/projects", summary="List projects", tags=["Projects"])
+async def list_projects(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(sa.select(projects_table).order_by(projects_table.c.created_at.desc()))
+    projects = []
+    for r in result.mappings().all():
+        d = dict(r)
+        # get task counts
+        task_result = await db.execute(
+            sa.select(tasks_table.c.status, sa.func.count().label("c"))
+            .where(tasks_table.c.project_id == d["id"])
+            .group_by(tasks_table.c.status)
+        )
+        status_counts = {row.status: row.c for row in task_result}
+        d["task_stats"] = status_counts
+        d["total_tasks"] = sum(status_counts.values())
+        d["completed_tasks"] = status_counts.get("done", 0)
+        d["progress"] = round(d["completed_tasks"] / max(d["total_tasks"], 1) * 100, 1)
+        projects.append(d)
+    return projects
+
+
+@app.get("/projects/{project_id}", summary="Get project detail", tags=["Projects"])
+async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
+    import json
+    result = await db.execute(sa.select(projects_table).where(projects_table.c.id == project_id))
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(404, f"Project {project_id} not found")
+    d = dict(row)
+    # Get tasks
+    task_result = await db.execute(
+        sa.select(tasks_table).where(tasks_table.c.project_id == project_id)
+        .order_by(tasks_table.c.priority.desc(), tasks_table.c.created_at)
+    )
+    tasks = []
+    for t in task_result.mappings().all():
+        td = dict(t)
+        try:
+            td["required_skills_list"] = json.loads(td["required_skills"]) if td["required_skills"] else []
+        except:
+            td["required_skills_list"] = []
+        tasks.append(td)
+    d["tasks"] = tasks
+
+    status_counts = {}
+    for t in tasks:
+        s = t["status"]
+        status_counts[s] = status_counts.get(s, 0) + 1
+    d["task_stats"] = status_counts
+    d["total_tasks"] = len(tasks)
+    d["completed_tasks"] = status_counts.get("done", 0)
+    d["progress"] = round(d["completed_tasks"] / max(d["total_tasks"], 1) * 100, 1)
+    return d
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – AI PRD Parsing
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/projects/{project_id}/parse", summary="AI parse PRD into tasks", tags=["AI"])
+async def parse_prd(project_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Uses OpenAI to parse the project's PRD text into structured tasks.
+    Each task gets a title, description, priority, estimated hours, and required skills.
+    """
+    import json
+    import httpx
+
+    # Get the project
+    result = await db.execute(sa.select(projects_table).where(projects_table.c.id == project_id))
+    project = result.mappings().first()
+    if not project:
+        raise HTTPException(404, f"Project {project_id} not found")
+    if not project["prd_text"]:
+        raise HTTPException(400, "No PRD text uploaded for this project")
+
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key or api_key.startswith("sk-..."):
+        # Fallback: generate mock tasks from PRD keywords
+        log.warning("No valid OpenAI key — using rule-based task extraction")
+        tasks = _fallback_parse_prd(project["prd_text"])
+    else:
+        prompt = f"""You are a project management AI. Analyze this Product Requirements Document (PRD) and break it down into actionable development tasks.
+
+For each task, provide:
+- title: Clear, concise task title
+- description: Detailed description of what needs to be done
+- priority: "high", "medium", or "low"
+- estimated_hours: Estimated hours to complete (number)
+- required_skills: Array of skill tags needed (e.g. ["python", "react", "devops", "ml", "backend", "frontend", "testing", "database", "api", "ui/ux"])
+
+Return a JSON array of tasks. Respond with ONLY valid JSON, no markdown.
+
+PRD:
+{project["prd_text"][:4000]}"""
+
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": "gpt-4o-mini",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.3,
+                        "max_tokens": 3000,
+                    }
+                )
+                if resp.status_code != 200:
+                    log.error("OpenAI error: %s", resp.text)
+                    tasks = _fallback_parse_prd(project["prd_text"])
+                else:
+                    content = resp.json()["choices"][0]["message"]["content"]
+                    # Clean markdown if present
+                    if content.strip().startswith("```"):
+                        content = content.strip().split("\n", 1)[1].rsplit("```", 1)[0]
+                    tasks = json.loads(content)
+        except Exception as e:
+            log.error("OpenAI parsing failed: %s", e)
+            tasks = _fallback_parse_prd(project["prd_text"])
+
+    # Insert tasks into DB
+    created_tasks = []
+    for t in tasks:
+        ins = await db.execute(
+            tasks_table.insert().values(
+                project_id=project_id,
+                title=t.get("title", "Untitled Task"),
+                description=t.get("description", ""),
+                priority=t.get("priority", "medium"),
+                estimated_hours=t.get("estimated_hours", 4),
+                required_skills=json.dumps(t.get("required_skills", [])),
+            ).returning(tasks_table)
+        )
+        created_tasks.append(dict(ins.mappings().first()))
+
+    # Update project task count
+    await db.execute(
+        projects_table.update().where(projects_table.c.id == project_id)
+        .values(total_tasks=len(created_tasks))
+    )
+    await db.commit()
+
+    log.info("Parsed PRD for project %d: %d tasks created", project_id, len(created_tasks))
+    return {"project_id": project_id, "tasks_created": len(created_tasks), "tasks": created_tasks}
+
+
+def _fallback_parse_prd(prd_text: str) -> list:
+    """Simple rule-based fallback when OpenAI is not available."""
+    import re
+    lines = prd_text.strip().split("\n")
+    tasks = []
+    skill_keywords = {
+        "api": ["api", "endpoint", "rest", "graphql"],
+        "frontend": ["ui", "interface", "dashboard", "page", "component", "react", "css"],
+        "backend": ["server", "logic", "middleware", "service", "handler"],
+        "database": ["database", "schema", "migration", "table", "query", "sql"],
+        "testing": ["test", "coverage", "qa", "validation"],
+        "devops": ["deploy", "ci/cd", "docker", "kubernetes", "pipeline"],
+        "ml": ["model", "ai", "machine learning", "prediction", "training"],
+        "python": ["python", "flask", "django", "fastapi"],
+        "react": ["react", "next.js", "component", "jsx"],
+    }
+
+    for line in lines:
+        line = line.strip()
+        if not line or len(line) < 10:
+            continue
+        # Extract headings or bullet points as task candidates
+        if line.startswith(("#", "-", "*", "•")) or re.match(r'^\d+\.', line):
+            title = re.sub(r'^[#\-*•\d.]+\s*', '', line).strip()
+            if len(title) < 5:
+                continue
+            # Detect skills from text
+            skills = []
+            lower = title.lower()
+            for skill, keywords in skill_keywords.items():
+                if any(kw in lower for kw in keywords):
+                    skills.append(skill)
+            if not skills:
+                skills = ["backend"]  # default
+
+            tasks.append({
+                "title": title[:200],
+                "description": f"Task derived from PRD: {title}",
+                "priority": "high" if any(w in lower for w in ["critical", "must", "important", "core"]) else "medium",
+                "estimated_hours": 8,
+                "required_skills": skills,
+            })
+
+    if not tasks:
+        # Create at least a few generic tasks
+        tasks = [
+            {"title": "Review and finalize requirements", "description": "Review the PRD and clarify requirements", "priority": "high", "estimated_hours": 4, "required_skills": ["backend"]},
+            {"title": "Design system architecture", "description": "Create architecture diagram and tech stack decisions", "priority": "high", "estimated_hours": 8, "required_skills": ["backend", "devops"]},
+            {"title": "Set up development environment", "description": "Configure repos, CI/CD, and dev tools", "priority": "medium", "estimated_hours": 4, "required_skills": ["devops"]},
+        ]
+    return tasks[:20]  # Cap at 20 tasks
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – AI Task Assignment
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/projects/{project_id}/assign-all", summary="AI assign all unassigned tasks", tags=["AI"])
+async def ai_assign_all(project_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    For each unassigned task in the project, use AI to match the best employee
+    based on skill overlap, current workload, and availability.
+    """
+    import json
+
+    # Get unassigned tasks
+    task_result = await db.execute(
+        sa.select(tasks_table).where(
+            tasks_table.c.project_id == project_id,
+            tasks_table.c.assigned_to.is_(None),
+        )
+    )
+    unassigned = [dict(r) for r in task_result.mappings().all()]
+    if not unassigned:
+        return {"message": "No unassigned tasks", "assignments": []}
+
+    # Get available employees
+    emp_result = await db.execute(
+        sa.select(employees_table).where(employees_table.c.availability == "available")
+    )
+    employees = []
+    for r in emp_result.mappings().all():
+        d = dict(r)
+        try:
+            d["skills_list"] = json.loads(d["skills"]) if d["skills"] else []
+        except:
+            d["skills_list"] = []
+        employees.append(d)
+
+    if not employees:
+        raise HTTPException(400, "No available employees. Add employees first.")
+
+    assignments = []
+    for task in unassigned:
+        try:
+            task_skills = json.loads(task["required_skills"]) if task["required_skills"] else []
+        except:
+            task_skills = []
+
+        # Score each employee
+        best_emp = None
+        best_score = -1
+        for emp in employees:
+            emp_skills = emp["skills_list"]
+            # Skill overlap score (0–1)
+            if task_skills:
+                overlap = len(set(s.lower() for s in task_skills) & set(s.lower() for s in emp_skills))
+                skill_score = overlap / len(task_skills)
+            else:
+                skill_score = 0.5
+
+            # Workload penalty (fewer tasks = better)
+            load_score = max(0, 1 - (emp["current_load"] * 0.15))
+
+            # Combined score
+            score = (skill_score * 0.7) + (load_score * 0.3)
+            if score > best_score:
+                best_score = score
+                best_emp = emp
+
+        if best_emp:
+            confidence = round(best_score * 100, 1)
+            await db.execute(
+                tasks_table.update().where(tasks_table.c.id == task["id"])
+                .values(assigned_to=best_emp["id"], assigned_name=best_emp["name"], ai_confidence=confidence)
+            )
+            # Increment load
+            await db.execute(
+                employees_table.update().where(employees_table.c.id == best_emp["id"])
+                .values(current_load=employees_table.c.current_load + 1)
+            )
+            best_emp["current_load"] += 1  # update in-memory too
+
+            assignments.append({
+                "task_id": task["id"],
+                "task_title": task["title"],
+                "assigned_to": best_emp["name"],
+                "employee_id": best_emp["id"],
+                "confidence": confidence,
+                "matched_skills": list(set(s.lower() for s in (json.loads(task["required_skills"]) if task["required_skills"] else [])) & set(s.lower() for s in best_emp["skills_list"])),
+            })
+
+    await db.commit()
+    log.info("AI assigned %d tasks in project %d", len(assignments), project_id)
+    return {"project_id": project_id, "assignments": assignments, "total_assigned": len(assignments)}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – Tasks
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TaskStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(todo|in_progress|done)$")
+
+@app.get("/projects/{project_id}/tasks", summary="Get project tasks", tags=["Tasks"])
+async def list_project_tasks(project_id: int, db: AsyncSession = Depends(get_db)):
+    import json
+    result = await db.execute(
+        sa.select(tasks_table).where(tasks_table.c.project_id == project_id)
+        .order_by(
+            sa.case(
+                (tasks_table.c.priority == "high", 1),
+                (tasks_table.c.priority == "medium", 2),
+                (tasks_table.c.priority == "low", 3),
+                else_=4
+            ),
+            tasks_table.c.created_at
+        )
+    )
+    tasks = []
+    for r in result.mappings().all():
+        d = dict(r)
+        try:
+            d["required_skills_list"] = json.loads(d["required_skills"]) if d["required_skills"] else []
+        except:
+            d["required_skills_list"] = []
+        tasks.append(d)
+    return tasks
+
+
+@app.put("/tasks/{task_id}/status", summary="Update task status", tags=["Tasks"])
+async def update_task_status(task_id: int, body: TaskStatusUpdate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(sa.select(tasks_table).where(tasks_table.c.id == task_id))
+    task = result.mappings().first()
+    if not task:
+        raise HTTPException(404, f"Task {task_id} not found")
+
+    update_vals = {"status": body.status}
+    if body.status == "done":
+        update_vals["completed_at"] = datetime.utcnow()
+
+    await db.execute(tasks_table.update().where(tasks_table.c.id == task_id).values(**update_vals))
+
+    # Update project completed count
+    if body.status == "done" or task["status"] == "done":
+        proj_id = task["project_id"]
+        done_result = await db.execute(
+            sa.select(sa.func.count()).select_from(tasks_table)
+            .where(tasks_table.c.project_id == proj_id, tasks_table.c.status == "done")
+        )
+        done_count = done_result.scalar_one()
+        await db.execute(
+            projects_table.update().where(projects_table.c.id == proj_id)
+            .values(completed_tasks=done_count)
+        )
+
+    await db.commit()
+    updated = await db.execute(sa.select(tasks_table).where(tasks_table.c.id == task_id))
+    return dict(updated.mappings().first())
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Routes – Project Analytics
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/projects/{project_id}/analytics", summary="Project analytics", tags=["Analytics"])
+async def project_analytics(project_id: int, db: AsyncSession = Depends(get_db)):
+    import json
+    # Get project
+    proj_result = await db.execute(sa.select(projects_table).where(projects_table.c.id == project_id))
+    project = proj_result.mappings().first()
+    if not project:
+        raise HTTPException(404, f"Project {project_id} not found")
+
+    # Task stats
+    task_result = await db.execute(
+        sa.select(tasks_table).where(tasks_table.c.project_id == project_id)
+    )
+    tasks = [dict(r) for r in task_result.mappings().all()]
+    total = len(tasks)
+    done = sum(1 for t in tasks if t["status"] == "done")
+    in_progress = sum(1 for t in tasks if t["status"] == "in_progress")
+    todo = sum(1 for t in tasks if t["status"] == "todo")
+
+    # Priority breakdown
+    high = sum(1 for t in tasks if t["priority"] == "high")
+    medium = sum(1 for t in tasks if t["priority"] == "medium")
+    low = sum(1 for t in tasks if t["priority"] == "low")
+
+    # Workload by assignee
+    workload = {}
+    for t in tasks:
+        name = t["assigned_name"] or "Unassigned"
+        if name not in workload:
+            workload[name] = {"total": 0, "done": 0, "in_progress": 0, "todo": 0, "hours": 0}
+        workload[name]["total"] += 1
+        workload[name][t["status"]] = workload[name].get(t["status"], 0) + 1
+        workload[name]["hours"] += t["estimated_hours"] or 0
+
+    # Total estimated hours
+    total_hours = sum(t["estimated_hours"] or 0 for t in tasks)
+    completed_hours = sum(t["estimated_hours"] or 0 for t in tasks if t["status"] == "done")
+
+    return {
+        "project": {"id": project["id"], "name": project["name"], "status": project["status"]},
+        "progress": round(done / max(total, 1) * 100, 1),
+        "task_summary": {
+            "total": total, "done": done, "in_progress": in_progress, "todo": todo,
+        },
+        "priority_breakdown": {"high": high, "medium": medium, "low": low},
+        "workload": [{"assignee": k, **v} for k, v in sorted(workload.items(), key=lambda x: -x[1]["total"])],
+        "hours": {"total_estimated": round(total_hours, 1), "completed": round(completed_hours, 1)},
+    }

@@ -1,0 +1,38 @@
+# =============================================================================
+#  Aegis PM – Agents Dockerfile
+#  Runs the APScheduler-based Monitor + Communicator agent runner.
+# =============================================================================
+
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# ── System deps ───────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python deps ───────────────────────────────────────────────────────────────
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── App source ────────────────────────────────────────────────────────────────
+COPY agents/ ./agents/
+
+# ── Development (default) – agents dir mounted as volume for hot-reload ───────
+FROM base AS development
+CMD ["python", "-m", "agents.runner"]
+
+# ── Production – no volume mounts, locked source ──────────────────────────────
+FROM base AS production
+RUN addgroup --system aegis && adduser --system --ingroup aegis aegis
+USER aegis
+CMD ["python", "-m", "agents.runner"]

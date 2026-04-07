@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Aegis PM – HITL Dashboard</title>
+<style>
+/* ── Reset + tokens ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0f18;
+  --surface:   #13151f;
+  --surface2:  #1a1d2a;
+  --border:    #252838;
+  --border2:   #2e3147;
+  --accent:    #6c63ff;
+  --accent-d:  #5750d9;
+  --warn:      #f59e0b;
+  --ok:        #10b981;
+  --ok-d:      #0d9268;
+  --danger:    #ef4444;
+  --danger-d:  #cc2f2f;
+  --info:      #38bdf8;
+  --text:      #e2e8f0;
+  --text2:     #a0aab8;
+  --text3:     #5a6478;
+  --radius:    8px;
+  --radius-lg: 12px;
+  --transition: .15s ease;
+}
+
+html { font-size: 15px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1rem; font-weight: 700; letter-spacing: -.4px;
+}
+.logo-mark {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 800; color: #fff;
+}
+.logo-text em { color: var(--accent); font-style: normal; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .75rem; color: var(--text2);
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 20px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ok);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Stat cards ────────────────────────────────────────────────────────── */
+.stats-bar {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 20px;
+  cursor: pointer; transition: border-color var(--transition);
+  min-width: 108px;
+}
+.stat-card:hover, .stat-card.active { border-color: var(--accent); }
+.stat-card.active { background: rgba(108,99,255,.08); }
+.stat-num { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+.stat-lbl { font-size: .7rem; color: var(--text3); margin-top: 5px;
+            text-transform: uppercase; letter-spacing: .6px; }
+.stat-num.s-pending   { color: var(--warn); }
+.stat-num.s-approved  { color: var(--ok); }
+.stat-num.s-notified  { color: var(--accent); }
+.stat-num.s-dismissed { color: var(--text3); }
+.stat-num.s-total     { color: var(--text); }
+
+/* ── Toolbar ───────────────────────────────────────────────────────────── */
+.toolbar {
+  padding: 14px 28px;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.search-wrap {
+  position: relative; flex: 1; min-width: 200px; max-width: 320px;
+}
+.search-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--text3); pointer-events: none;
+}
+.search-input {
+  width: 100%; padding: 7px 10px 7px 34px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius); color: var(--text); font-size: .84rem;
+  outline: none; transition: border-color var(--transition);
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text3); }
+
+.select-wrap { position: relative; }
+.select-wrap svg {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: var(--text3);
+}
+select {
+  appearance: none; padding: 7px 28px 7px 12px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius); color: var(--text); font-size: .84rem;
+  outline: none; cursor: pointer; transition: border-color var(--transition);
+}
+select:focus { border-color: var(--accent); }
+
+.btn {
+  padding: 7px 14px; border-radius: var(--radius); border: 1px solid transparent;
+  font-size: .82rem; font-weight: 600; cursor: pointer;
+  transition: opacity var(--transition), background var(--transition);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
+.btn-primary   { background: var(--accent);  color: #fff; }
+.btn-primary:hover { background: var(--accent-d); }
+.btn-ok        { background: var(--ok);      color: #fff; }
+.btn-ok:hover  { background: var(--ok-d); }
+.btn-danger    { background: var(--danger);  color: #fff; }
+.btn-danger:hover { background: var(--danger-d); }
+.btn-ghost     { background: var(--surface2); color: var(--text2);
+                  border-color: var(--border2); }
+.btn-ghost:hover { border-color: var(--border); color: var(--text); }
+
+.toolbar-right { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.bulk-actions  { display: flex; gap: 8px; }
+.bulk-actions.hidden { display: none; }
+.bulk-count { font-size: .8rem; color: var(--text2); align-self: center; }
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+.pagination {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-top: 1px solid var(--border);
+  font-size: .82rem; color: var(--text2);
+}
+.pag-btn {
+  padding: 5px 10px; border-radius: var(--radius);
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text2); cursor: pointer; font-size: .8rem;
+  transition: all var(--transition);
+}
+.pag-btn:disabled { opacity: .35; cursor: default; }
+.pag-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+.pag-info { margin: 0 4px; }
+
+/* ── Table ─────────────────────────────────────────────────────────────── */
+.main { padding: 0 28px 28px; overflow: hidden; }
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+}
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--surface); }
+th {
+  text-align: left; padding: 10px 14px;
+  font-size: .7rem; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .5px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; user-select: none;
+}
+th.sortable { cursor: pointer; }
+th.sortable:hover { color: var(--text2); }
+th.sort-asc::after  { content: ' ↑'; color: var(--accent); }
+th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+th.check-col, td.check-col { width: 38px; padding: 10px 0 10px 14px; }
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(108,99,255,.05); }
+tbody tr.selected { background: rgba(108,99,255,.1); }
+td { padding: 13px 14px; font-size: .84rem; vertical-align: middle; }
+
+input[type="checkbox"] {
+  width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer;
+}
+
+/* ── Cell styles ───────────────────────────────────────────────────────── */
+.task-link {
+  color: var(--accent); text-decoration: none; font-weight: 600; font-size: .85rem;
+}
+.task-link:hover { text-decoration: underline; }
+.summary-cell {
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: var(--text2); font-size: .82rem;
+}
+.assignee-cell { font-size: .84rem; }
+.date-cell { font-size: .78rem; color: var(--text2); white-space: nowrap; }
+.stale-days {
+  display: inline-block; font-size: .7rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px; margin-left: 5px;
+}
+.stale-3  { background: rgba(245,158,11,.15); color: var(--warn); }
+.stale-7  { background: rgba(239,68,68,.15);  color: var(--danger); }
+
+/* ── Badges ────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: .7rem; font-weight: 700; letter-spacing: .2px;
+  white-space: nowrap;
+}
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+.badge.pending   { background: rgba(245,158,11,.12); color: var(--warn);   }
+.badge.pending::before   { background: var(--warn); }
+.badge.approved  { background: rgba(16,185,129,.12); color: var(--ok);     }
+.badge.approved::before  { background: var(--ok); }
+.badge.notified  { background: rgba(108,99,255,.12); color: var(--accent); }
+.badge.notified::before  { background: var(--accent); }
+.badge.dismissed { background: rgba(90,100,120,.15);  color: var(--text3); }
+.badge.dismissed::before { background: var(--text3); }
+
+.slack-badge {
+  font-size: .7rem; padding: 2px 8px; border-radius: 10px;
+}
+.slack-badge.sent     { background: rgba(16,185,129,.12); color: var(--ok); }
+.slack-badge.unsent   { background: rgba(90,100,120,.12); color: var(--text3); }
+
+/* ── Row actions ───────────────────────────────────────────────────────── */
+.row-actions { display: flex; gap: 6px; align-items: center; }
+.act-btn {
+  padding: 4px 10px; border-radius: 6px; border: none;
+  font-size: .75rem; font-weight: 600; cursor: pointer;
+  transition: opacity var(--transition);
+}
+.act-btn:hover { opacity: .82; }
+.act-approve { background: var(--ok);     color: #fff; }
+.act-dismiss { background: var(--danger); color: #fff; }
+.act-reopen  { background: var(--surface2); color: var(--text2);
+               border: 1px solid var(--border2); }
+.act-detail  { background: transparent; color: var(--accent);
+               border: 1px solid rgba(108,99,255,.3); font-size: .72rem; }
+
+/* ── Empty / loading states ────────────────────────────────────────────── */
+.state-box { text-align: center; padding: 60px 20px; color: var(--text3); }
+.state-box .icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+.state-box p { font-size: .9rem; }
+.loading-row td { padding: 60px; text-align: center; color: var(--text3); font-size: .88rem; }
+
+/* ── Drawer (detail panel) ──────────────────────────────────────────────── */
+.drawer-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.45);
+}
+.drawer-overlay.open { display: block; }
+.drawer {
+  position: fixed; top: 0; right: -460px; bottom: 0;
+  width: 460px; max-width: 95vw;
+  background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: right .25s cubic-bezier(.4,0,.2,1); z-index: 201;
+  overflow: hidden;
+}
+.drawer.open { right: 0; }
+.drawer-head {
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.drawer-title { font-size: 1rem; font-weight: 700; }
+.drawer-sub { font-size: .78rem; color: var(--text3); margin-top: 2px; }
+.drawer-close {
+  background: none; border: none; color: var(--text3); font-size: 1.2rem;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  transition: color var(--transition);
+}
+.drawer-close:hover { color: var(--text); }
+.drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+.drawer-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+.detail-section { margin-bottom: 20px; }
+.detail-label { font-size: .7rem; color: var(--text3); text-transform: uppercase;
+                letter-spacing: .5px; margin-bottom: 5px; }
+.detail-val { font-size: .88rem; color: var(--text); word-break: break-word; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Audit timeline */
+.timeline { list-style: none; position: relative; padding-left: 18px; }
+.timeline::before {
+  content: ''; position: absolute; left: 6px; top: 6px; bottom: 0;
+  width: 1px; background: var(--border2);
+}
+.tl-item { position: relative; margin-bottom: 14px; }
+.tl-dot {
+  position: absolute; left: -18px; top: 4px;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--surface2); border: 2px solid var(--border2);
+  z-index: 1;
+}
+.tl-dot.pending   { border-color: var(--warn); }
+.tl-dot.approved  { border-color: var(--ok); }
+.tl-dot.notified  { border-color: var(--accent); }
+.tl-dot.dismissed { border-color: var(--text3); }
+.tl-meta { font-size: .72rem; color: var(--text3); margin-bottom: 2px; }
+.tl-actor { font-size: .78rem; color: var(--text2); }
+.tl-notes { font-size: .76rem; color: var(--text3); font-style: italic; margin-top: 2px; }
+
+/* ── Modal ──────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.55);
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 24px 28px;
+  width: 90%; max-width: 440px;
+}
+.modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+.modal p  { font-size: .84rem; color: var(--text2); margin-bottom: 14px; }
+.modal textarea {
+  width: 100%; resize: vertical; min-height: 70px;
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: var(--radius); color: var(--text);
+  padding: 9px 12px; font-size: .84rem; font-family: inherit;
+  outline: none; transition: border-color var(--transition);
+  margin-bottom: 16px;
+}
+.modal textarea:focus { border-color: var(--accent); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Toast ──────────────────────────────────────────────────────────────── */
+#toast-container {
+  position: fixed; bottom: 24px; right: 24px;
+  display: flex; flex-direction: column; gap: 8px; z-index: 999;
+}
+.toast {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); padding: 11px 16px;
+  border-radius: var(--radius); font-size: .84rem;
+  border-left: 3px solid var(--accent);
+  transform: translateX(100px); opacity: 0;
+  transition: all .3s ease;
+  max-width: 320px;
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+
+/* ── Kbd shortcuts hint ─────────────────────────────────────────────────── */
+.kbd-hint {
+  font-size: .7rem; color: var(--text3); padding: 0 28px 10px;
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+kbd {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 1px 5px; font-size: .68rem;
+  font-family: monospace;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header, .stats-bar, .toolbar, .main, .pagination { padding-left: 14px; padding-right: 14px; }
+  .summary-cell, .date-cell { display: none; }
+  .toolbar-right { margin-left: 0; }
+  .drawer { width: 100%; max-width: 100%; }
+}
+</style>
+  <!-- Optional runtime config – overrides API URL in dev (see nginx/dev-config.js) -->
+  <script src="/config.js" onerror="void 0"></script>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">A</div>
+    <span><em>Aegis</em> PM &mdash; HITL Dashboard</span>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <span class="live-dot"></span>
+      <span id="last-refresh">–</span>
+    </div>
+    <button class="btn btn-ghost" onclick="refresh()" title="Refresh (R)">↻ Refresh</button>
+  </div>
+</header>
+
+<!-- ── Stat cards ─────────────────────────────────────────────────────────── -->
+<div class="stats-bar">
+  <div class="stat-card active" id="sc-all"       onclick="setStatusFilter('',this)">
+    <div class="stat-num s-total"     id="cnt-total">–</div>
+    <div class="stat-lbl">All</div>
+  </div>
+  <div class="stat-card" id="sc-pending"   onclick="setStatusFilter('pending',this)">
+    <div class="stat-num s-pending"   id="cnt-pending">–</div>
+    <div class="stat-lbl">Pending</div>
+  </div>
+  <div class="stat-card" id="sc-approved"  onclick="setStatusFilter('approved',this)">
+    <div class="stat-num s-approved"  id="cnt-approved">–</div>
+    <div class="stat-lbl">Approved</div>
+  </div>
+  <div class="stat-card" id="sc-notified"  onclick="setStatusFilter('notified',this)">
+    <div class="stat-num s-notified"  id="cnt-notified">–</div>
+    <div class="stat-lbl">Notified</div>
+  </div>
+  <div class="stat-card" id="sc-dismissed" onclick="setStatusFilter('dismissed',this)">
+    <div class="stat-num s-dismissed" id="cnt-dismissed">–</div>
+    <div class="stat-lbl">Dismissed</div>
+  </div>
+</div>
+
+<!-- ── Toolbar ─────────────────────────────────────────────────────────────── -->
+<div class="toolbar">
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input class="search-input" id="search-input" type="text"
+           placeholder="Search task, assignee…" oninput="onSearch(this.value)"/>
+  </div>
+
+  <div class="select-wrap">
+    <select id="sort-select" onchange="onSortChange()">
+      <option value="detected_at:desc">Newest first</option>
+      <option value="detected_at:asc">Oldest first</option>
+      <option value="assignee:asc">Assignee A→Z</option>
+      <option value="last_updated:asc">Last updated ↑</option>
+    </select>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="m6 9 6 6 6-6"/>
+    </svg>
+  </div>
+
+  <div class="select-wrap">
+    <select id="page-size-select" onchange="onPageSizeChange()">
+      <option value="25">25 / page</option>
+      <option value="50" selected>50 / page</option>
+      <option value="100">100 / page</option>
+    </select>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="m6 9 6 6 6-6"/>
+    </svg>
+  </div>
+
+  <div class="toolbar-right">
+    <div class="bulk-actions hidden" id="bulk-actions">
+      <span class="bulk-count" id="bulk-count">0 selected</span>
+      <button class="btn btn-ok"    onclick="bulkAction('approve')" title="Bulk approve">✓ Approve</button>
+      <button class="btn btn-danger" onclick="bulkAction('dismiss')" title="Bulk dismiss">✕ Dismiss</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Keyboard hints ──────────────────────────────────────────────────────── -->
+<div class="kbd-hint">
+  <span><kbd>A</kbd> approve selected</span>
+  <span><kbd>D</kbd> dismiss selected</span>
+  <span><kbd>R</kbd> refresh</span>
+  <span><kbd>Esc</kbd> close panel</span>
+</div>
+
+<!-- ── Table ───────────────────────────────────────────────────────────────── -->
+<div class="main">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="check-col">
+            <input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)" title="Select all"/>
+          </th>
+          <th class="sortable" onclick="setColSort('task_key')">Task</th>
+          <th>Summary</th>
+          <th class="sortable" onclick="setColSort('assignee')">Assignee</th>
+          <th class="sortable summary-cell" onclick="setColSort('last_updated')">Last updated</th>
+          <th class="sortable date-cell" onclick="setColSort('detected_at')">Detected</th>
+          <th class="sortable" onclick="setColSort('status')">Status</th>
+          <th>Slack</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Pagination ──────────────────────────────────────────────────────────── -->
+<div class="pagination" id="pag-bar">
+  <button class="pag-btn" id="pag-prev" onclick="goPage(-1)">← Prev</button>
+  <span class="pag-info" id="pag-info">–</span>
+  <button class="pag-btn" id="pag-next" onclick="goPage(1)">Next →</button>
+</div>
+
+<!-- ── Detail drawer ───────────────────────────────────────────────────────── -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-title" id="drawer-title">–</div>
+      <div class="drawer-sub"  id="drawer-sub">–</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <p style="color:var(--text3);font-size:.84rem">Loading…</p>
+  </div>
+  <div class="drawer-footer" id="drawer-footer"></div>
+</div>
+
+<!-- ── Action modal ────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Confirm action</h3>
+    <p  id="modal-desc"></p>
+    <textarea id="modal-notes" placeholder="Notes (optional)…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="modal-confirm" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ─────────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ── Script ──────────────────────────────────────────────────────────────── -->
+<script>
+'use strict';
+
+// ── Config ────────────────────────────────────────────────────────────────────
+// API URL resolution order:
+  //   1. window.AEGIS_API_URL set by server/env injection
+  //   2. ?api=<url> query param for quick local testing
+  //   3. '/api' nginx proxy path (auto-detected when not on localhost)
+  //   4. 'http://localhost:8000' for local standalone dev
+  const _apiParam = new URLSearchParams(location.search).get('api');
+  const API = window.AEGIS_API_URL
+    || _apiParam
+    || (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'
+        ? '/api' : 'http://localhost:8000');
+const REFRESH_INTERVAL = 30_000;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  alerts:       [],        // current page items
+  total:        0,
+  page:         0,
+  pageSize:     50,
+  statusFilter: '',
+  search:       '',
+  orderBy:      'detected_at',
+  orderDir:     'desc',
+  selected:     new Set(),  // alert ids
+  openAlertId:  null,
+};
+
+let searchTimer = null;
+let pendingModal = null;   // { ids, action }
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  loadAlerts();
+  setInterval(() => { loadStats(); loadAlerts(false); }, REFRESH_INTERVAL);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'r' || e.key === 'R') refresh();
+  if (e.key === 'Escape') { closeDrawer(); closeModal(); }
+  if (e.key === 'a' || e.key === 'A') { if (state.selected.size) bulkAction('approve'); }
+  if (e.key === 'd' || e.key === 'D') { if (state.selected.size) bulkAction('dismiss'); }
+});
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const s = await apiFetch('/stats');
+    setText('cnt-total',     s.total);
+    setText('cnt-pending',   s.pending);
+    setText('cnt-approved',  s.approved);
+    setText('cnt-notified',  s.notified);
+    setText('cnt-dismissed', s.dismissed);
+  } catch (_) {}
+}
+
+// ── Alerts list ───────────────────────────────────────────────────────────────
+async function loadAlerts(showLoader = true) {
+  if (showLoader) renderLoader();
+
+  const params = new URLSearchParams();
+  if (state.statusFilter) params.set('status',    state.statusFilter);
+  if (state.search)       params.set('assignee',  state.search);   // search hits assignee
+  if (state.search)       params.set('task_key',  state.search);   // and task_key (OR via two fetches — here simplified)
+  params.set('order_by',  state.orderBy);
+  params.set('order_dir', state.orderDir);
+  params.set('limit',     state.pageSize);
+  params.set('offset',    state.page * state.pageSize);
+
+  try {
+    // Fetch with assignee filter
+    const byAssignee = await apiFetch(`/alerts?${buildParams({...Object.fromEntries(params), assignee: state.search || undefined, task_key: undefined})}`);
+    let data = byAssignee;
+
+    // If search is active, also fetch by task_key and merge unique results
+    if (state.search) {
+      try {
+        const byTask = await apiFetch(`/alerts?${buildParams({...Object.fromEntries(params), task_key: state.search, assignee: undefined})}`);
+        const seen = new Set(byAssignee.items.map(a => a.id));
+        const merged = [...byAssignee.items, ...byTask.items.filter(a => !seen.has(a.id))];
+        data = { items: merged, total: Math.max(byAssignee.total, byTask.total), limit: state.pageSize, offset: state.page * state.pageSize };
+      } catch (_) {}
+    }
+
+    state.alerts = data.items;
+    state.total  = data.total;
+
+    renderTable();
+    renderPagination();
+    updateLastRefresh();
+  } catch (err) {
+    renderError(err.message);
+  }
+}
+
+function buildParams(obj) {
+  const p = new URLSearchParams();
+  Object.entries(obj).forEach(([k, v]) => { if (v !== undefined && v !== '') p.set(k, v); });
+  return p.toString();
+}
+
+function refresh() {
+  loadStats();
+  loadAlerts();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderLoader() {
+  document.getElementById('tbody').innerHTML =
+    `<tr class="loading-row"><td colspan="9">Loading alerts…</td></tr>`;
+}
+
+function renderError(msg) {
+  document.getElementById('tbody').innerHTML =
+    `<tr class="loading-row"><td colspan="9" style="color:var(--danger)">
+      ⚠ Could not load alerts: ${esc(msg)}
+    </td></tr>`;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+
+  if (!state.alerts.length) {
+    const msg = state.statusFilter
+      ? `No ${state.statusFilter} alerts.`
+      : state.search ? 'No alerts matching your search.' : 'No alerts yet.';
+    tbody.innerHTML = `<tr><td colspan="9">
+      <div class="state-box">
+        <span class="icon">${state.statusFilter === 'pending' ? '🎉' : '📭'}</span>
+        <p>${msg}</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  // Update sort indicators on headers
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+  });
+
+  tbody.innerHTML = state.alerts.map(a => {
+    const checked = state.selected.has(a.id) ? 'checked' : '';
+    const staleDays = staleDaysCount(a.last_updated);
+    const staleTag  = staleDays >= 7
+      ? `<span class="stale-days stale-7">${staleDays}d</span>`
+      : staleDays >= 3
+        ? `<span class="stale-days stale-3">${staleDays}d</span>`
+        : '';
+
+    const taskCell = a.jira_url
+      ? `<a class="task-link" href="${esc(a.jira_url)}" target="_blank" rel="noopener">${esc(a.task_key)}</a>`
+      : `<span class="task-link">${esc(a.task_key)}</span>`;
+
+    const actions = buildRowActions(a);
+
+    return `<tr class="${checked ? 'selected' : ''}" data-id="${a.id}">
+      <td class="check-col">
+        <input type="checkbox" ${checked} onchange="toggleRow(${a.id},this.checked)" onclick="e=>e.stopPropagation()"/>
+      </td>
+      <td>${taskCell}</td>
+      <td><div class="summary-cell" title="${esc(a.task_summary || '')}">${esc(a.task_summary || '—')}</div></td>
+      <td class="assignee-cell">${esc(a.assignee)}</td>
+      <td class="date-cell summary-cell">${fmtDate(a.last_updated)}${staleTag}</td>
+      <td class="date-cell">${fmtDate(a.detected_at)}</td>
+      <td><span class="badge ${a.status}">${a.status}</span></td>
+      <td>
+        <span class="slack-badge ${a.slack_sent ? 'sent' : 'unsent'}">
+          ${a.slack_sent ? '✓ Sent' : '–'}
+        </span>
+      </td>
+      <td><div class="row-actions">${actions}</div></td>
+    </tr>`;
+  }).join('');
+
+  // Sync select-all checkbox
+  const all = state.alerts.every(a => state.selected.has(a.id)) && state.alerts.length > 0;
+  document.getElementById('select-all').checked = all;
+}
+
+function buildRowActions(a) {
+  const detail = `<button class="act-btn act-detail" onclick="openDrawer(${a.id})">Detail</button>`;
+  if (a.status === 'pending') {
+    return `<button class="act-btn act-approve" onclick="openModal([${a.id}],'approve')">Approve</button>
+            <button class="act-btn act-dismiss" onclick="openModal([${a.id}],'dismiss')">Dismiss</button>
+            ${detail}`;
+  }
+  if (a.status === 'dismissed' || a.status === 'notified') {
+    return `<button class="act-btn act-reopen" onclick="openModal([${a.id}],'reopen')">Reopen</button>
+            ${detail}`;
+  }
+  return `<span style="color:var(--text3);font-size:.75rem">${a.status}</span> ${detail}`;
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+function renderPagination() {
+  const totalPages = Math.ceil(state.total / state.pageSize) || 1;
+  const curr       = state.page + 1;
+  const start      = state.page * state.pageSize + 1;
+  const end        = Math.min((state.page + 1) * state.pageSize, state.total);
+
+  document.getElementById('pag-info').textContent =
+    state.total === 0 ? 'No results' : `${start}–${end} of ${state.total}`;
+
+  document.getElementById('pag-prev').disabled = state.page === 0;
+  document.getElementById('pag-next').disabled = state.page >= totalPages - 1;
+}
+
+function goPage(dir) {
+  const totalPages = Math.ceil(state.total / state.pageSize) || 1;
+  const next = state.page + dir;
+  if (next < 0 || next >= totalPages) return;
+  state.page = next;
+  state.selected.clear();
+  loadAlerts();
+}
+
+// ── Filters / sorting ─────────────────────────────────────────────────────────
+function setStatusFilter(status, card) {
+  state.statusFilter = status;
+  state.page = 0;
+  state.selected.clear();
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  loadAlerts();
+}
+
+function onSearch(val) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.search = val.trim();
+    state.page   = 0;
+    state.selected.clear();
+    loadAlerts();
+  }, 320);
+}
+
+function onSortChange() {
+  const val = document.getElementById('sort-select').value.split(':');
+  state.orderBy  = val[0];
+  state.orderDir = val[1];
+  state.page = 0;
+  loadAlerts();
+}
+
+function setColSort(col) {
+  if (state.orderBy === col) {
+    state.orderDir = state.orderDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    state.orderBy  = col;
+    state.orderDir = 'desc';
+  }
+  state.page = 0;
+  loadAlerts();
+}
+
+function onPageSizeChange() {
+  state.pageSize = parseInt(document.getElementById('page-size-select').value);
+  state.page = 0;
+  state.selected.clear();
+  loadAlerts();
+}
+
+// ── Row selection ─────────────────────────────────────────────────────────────
+function toggleRow(id, checked) {
+  if (checked) state.selected.add(id);
+  else         state.selected.delete(id);
+  updateBulkBar();
+  // Update row highlight
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (row) row.classList.toggle('selected', checked);
+  // Update select-all
+  const all = state.alerts.every(a => state.selected.has(a.id));
+  document.getElementById('select-all').checked = all;
+}
+
+function toggleSelectAll(checked) {
+  state.alerts.forEach(a => {
+    if (checked) state.selected.add(a.id);
+    else         state.selected.delete(a.id);
+  });
+  document.querySelectorAll('#tbody input[type=checkbox]').forEach(cb => cb.checked = checked);
+  document.querySelectorAll('#tbody tr[data-id]').forEach(row => row.classList.toggle('selected', checked));
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const n    = state.selected.size;
+  const bar  = document.getElementById('bulk-actions');
+  const cnt  = document.getElementById('bulk-count');
+  bar.classList.toggle('hidden', n === 0);
+  cnt.textContent = `${n} selected`;
+}
+
+// ── Bulk action ───────────────────────────────────────────────────────────────
+function bulkAction(action) {
+  const ids = [...state.selected];
+  if (!ids.length) return;
+  openModal(ids, action);
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(ids, action) {
+  pendingModal = { ids, action };
+  const isBulk = ids.length > 1;
+  const label  = action === 'approve' ? 'Approve' : action === 'dismiss' ? 'Dismiss' : 'Reopen';
+  const emoji  = action === 'approve' ? '✅' : action === 'dismiss' ? '🚫' : '↩';
+
+  document.getElementById('modal-title').textContent = `${emoji} ${label} Alert${isBulk ? 's' : ''}`;
+  document.getElementById('modal-desc').textContent  = isBulk
+    ? `This will ${action} ${ids.length} selected alert(s).`
+    : `This will ${action} alert #${ids[0]}.`;
+  document.getElementById('modal-notes').value = '';
+
+  const btn = document.getElementById('modal-confirm');
+  btn.textContent  = label;
+  btn.className    = `btn ${action === 'approve' ? 'btn-ok' : action === 'dismiss' ? 'btn-danger' : 'btn-ghost'}`;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-notes').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  pendingModal = null;
+}
+
+async function confirmModal() {
+  if (!pendingModal) return;
+  const { ids, action } = pendingModal;
+  const notes = document.getElementById('modal-notes').value.trim();
+  closeModal();
+
+  if (ids.length === 1) {
+    await doAction(ids[0], action, notes);
+  } else {
+    await doBulkAction(ids, action, notes);
+  }
+}
+
+// ── Single action ─────────────────────────────────────────────────────────────
+async function doAction(id, action, notes = '') {
+  try {
+    await apiFetch(`/alerts/${id}/${action}`, {
+      method:  'POST',
+      body:    JSON.stringify({ notes, actor: 'human' }),
+    });
+    state.selected.delete(id);
+    updateBulkBar();
+    toast(`Alert #${id} ${action}d`, action === 'approve' ? 'ok' : action === 'dismiss' ? 'danger' : 'info');
+    loadStats();
+    loadAlerts(false);
+    // Refresh drawer if open on this alert
+    if (state.openAlertId === id) openDrawer(id);
+  } catch (err) {
+    toast(`Error: ${err.message}`, 'danger');
+  }
+}
+
+// ── Bulk action ───────────────────────────────────────────────────────────────
+async function doBulkAction(ids, action, notes = '') {
+  try {
+    const res = await apiFetch(`/alerts/bulk/${action}`, {
+      method: 'POST',
+      body:   JSON.stringify({ ids, notes, actor: 'human' }),
+    });
+    const ok   = res.succeeded?.length || 0;
+    const fail = res.failed?.length    || 0;
+    state.selected.clear();
+    updateBulkBar();
+    toast(`${ok} alert(s) ${action}d${fail ? `, ${fail} failed` : ''}`, fail ? 'warn' : 'ok');
+    loadStats();
+    loadAlerts(false);
+  } catch (err) {
+    toast(`Bulk ${action} failed: ${err.message}`, 'danger');
+  }
+}
+
+// ── Detail drawer ─────────────────────────────────────────────────────────────
+async function openDrawer(id) {
+  state.openAlertId = id;
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-body').innerHTML =
+    '<p style="color:var(--text3);font-size:.84rem">Loading…</p>';
+  document.getElementById('drawer-footer').innerHTML = '';
+
+  try {
+    const [alert, history] = await Promise.all([
+      apiFetch(`/alerts/${id}`),
+      apiFetch(`/alerts/${id}/history`),
+    ]);
+    renderDrawer(alert, history);
+  } catch (err) {
+    document.getElementById('drawer-body').innerHTML =
+      `<p style="color:var(--danger);font-size:.84rem">Failed to load: ${esc(err.message)}</p>`;
+  }
+}
+
+function renderDrawer(a, history) {
+  document.getElementById('drawer-title').textContent = a.task_key;
+  document.getElementById('drawer-sub').innerHTML =
+    `<span class="badge ${a.status}">${a.status}</span>&nbsp; ${esc(a.assignee)}`;
+
+  const staleDays = staleDaysCount(a.last_updated);
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-label">Summary</div>
+      <div class="detail-val">${esc(a.task_summary || '—')}</div>
+    </div>
+
+    <div class="detail-section detail-grid">
+      <div>
+        <div class="detail-label">Assignee</div>
+        <div class="detail-val">${esc(a.assignee)}</div>
+        ${a.assignee_email ? `<div style="font-size:.76rem;color:var(--text3)">${esc(a.assignee_email)}</div>` : ''}
+      </div>
+      <div>
+        <div class="detail-label">Days stale</div>
+        <div class="detail-val" style="color:${staleDays >= 7 ? 'var(--danger)' : staleDays >= 3 ? 'var(--warn)' : 'var(--text)'}">
+          ${staleDays} day${staleDays !== 1 ? 's' : ''}
+        </div>
+      </div>
+      <div>
+        <div class="detail-label">Last updated</div>
+        <div class="detail-val date-cell">${fmtDateFull(a.last_updated)}</div>
+      </div>
+      <div>
+        <div class="detail-label">Detected</div>
+        <div class="detail-val date-cell">${fmtDateFull(a.detected_at)}</div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">Jira link</div>
+      <div class="detail-val">
+        ${a.jira_url
+          ? `<a href="${esc(a.jira_url)}" target="_blank" rel="noopener"
+               style="color:var(--accent);font-size:.82rem">
+               ${esc(a.jira_url)} ↗
+             </a>`
+          : '—'}
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">Slack</div>
+      <div class="detail-val">
+        <span class="slack-badge ${a.slack_sent ? 'sent' : 'unsent'}">
+          ${a.slack_sent ? '✓ Notification sent' : 'Not yet sent'}
+        </span>
+        ${a.slack_ts ? `<span style="color:var(--text3);font-size:.72rem;margin-left:8px">ts: ${esc(a.slack_ts)}</span>` : ''}
+      </div>
+    </div>
+
+    ${a.notes ? `
+    <div class="detail-section">
+      <div class="detail-label">Notes</div>
+      <div class="detail-val" style="font-style:italic;color:var(--text2)">${esc(a.notes)}</div>
+    </div>` : ''}
+
+    <div class="detail-section">
+      <div class="detail-label" style="margin-bottom:10px">History</div>
+      ${renderTimeline(history)}
+    </div>
+  `;
+
+  // Footer actions
+  const footer = document.getElementById('drawer-footer');
+  footer.innerHTML = '';
+  if (a.status === 'pending') {
+    footer.innerHTML = `
+      <button class="btn btn-ok"    onclick="doAction(${a.id},'approve')">✓ Approve</button>
+      <button class="btn btn-danger" onclick="doAction(${a.id},'dismiss')">✕ Dismiss</button>`;
+  } else if (a.status === 'dismissed' || a.status === 'notified') {
+    footer.innerHTML =
+      `<button class="btn btn-ghost" onclick="doAction(${a.id},'reopen')">↩ Reopen</button>`;
+  }
+  if (a.jira_url) {
+    const link = document.createElement('a');
+    link.href = a.jira_url; link.target = '_blank'; link.rel = 'noopener';
+    link.className = 'btn btn-ghost';
+    link.textContent = 'Open in Jira ↗';
+    footer.appendChild(link);
+  }
+}
+
+function renderTimeline(history) {
+  if (!history.length) return '<p style="font-size:.78rem;color:var(--text3)">No history yet.</p>';
+  const items = history.map(h => {
+    const arrow = h.from_status ? `${h.from_status} → ${h.to_status}` : `Created as ${h.to_status}`;
+    return `<li class="tl-item">
+      <div class="tl-dot ${h.to_status}"></div>
+      <div class="tl-meta">${fmtDateFull(h.created_at)}</div>
+      <div class="tl-actor"><strong>${esc(arrow)}</strong> by ${esc(h.actor)}</div>
+      ${h.notes ? `<div class="tl-notes">${esc(h.notes)}</div>` : ''}
+    </li>`;
+  }).join('');
+  return `<ul class="timeline">${items}</ul>`;
+}
+
+function closeDrawer() {
+  state.openAlertId = null;
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+const TOAST_COLORS = {
+  ok:     'var(--ok)',
+  danger: 'var(--danger)',
+  warn:   'var(--warn)',
+  info:   'var(--accent)',
+};
+
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.borderLeftColor = TOAST_COLORS[type] || TOAST_COLORS.info;
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 320);
+  }, 3200);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' })
+      + ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  } catch { return iso; }
+}
+
+function fmtDateFull(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('en-GB', {
+      day:'2-digit', month:'short', year:'numeric',
+      hour:'2-digit', minute:'2-digit',
+    });
+  } catch { return iso; }
+}
+
+function staleDaysCount(lastUpdated) {
+  if (!lastUpdated) return 0;
+  try {
+    return Math.floor((Date.now() - new Date(lastUpdated).getTime()) / 86_400_000);
+  } catch { return 0; }
+}
+
+function updateLastRefresh() {
+  const el = document.getElementById('last-refresh');
+  if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+}
+</script>
+</body>
+</html>

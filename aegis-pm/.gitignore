@@ -1,0 +1,48 @@
+# ── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── Environment / Secrets ──────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# Keep .env.example tracked
+
+# ── Auth credentials ───────────────────────────────────────────────────────
+nginx/.htpasswd
+
+# ── Docker ─────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── IDE ────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Logs ───────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Database ───────────────────────────────────────────────────────────────
+*.sqlite
+*.db
+
+# ── Alembic ────────────────────────────────────────────────────────────────
+# Track all migration files — never ignore versions/
