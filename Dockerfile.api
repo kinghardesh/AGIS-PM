@@ -1,0 +1,61 @@
+# =============================================================================
+#  Aegis PM – API Dockerfile
+#  Multi-stage: development (hot-reload) | production (gunicorn workers)
+# =============================================================================
+
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim AS base
+
+# System-level hardening
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# ── System deps ───────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python deps ───────────────────────────────────────────────────────────────
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── App source ────────────────────────────────────────────────────────────────
+COPY api/ ./api/
+COPY db/  ./db/
+
+EXPOSE 8000
+
+# ── Development stage (default) ───────────────────────────────────────────────
+FROM base AS development
+# Source is mounted as a volume in compose; CMD uses --reload
+CMD ["uvicorn", "api.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--reload", \
+     "--reload-dir", "/app/api", \
+     "--log-level", "info"]
+
+# ── Production stage ──────────────────────────────────────────────────────────
+FROM base AS production
+# Install gunicorn for production multi-worker serving
+RUN pip install --no-cache-dir "gunicorn==21.2.0"
+
+# Non-root user for security
+RUN addgroup --system aegis && adduser --system --ingroup aegis aegis
+USER aegis
+
+# 2 workers × (2 × CPUs + 1) is standard; override via WEB_CONCURRENCY env
+CMD ["sh", "-c", \
+     "gunicorn api.main:app \
+      --worker-class uvicorn.workers.UvicornWorker \
+      --workers ${WEB_CONCURRENCY:-2} \
+      --bind 0.0.0.0:8000 \
+      --timeout 120 \
+      --access-logfile - \
+      --error-logfile -"]
